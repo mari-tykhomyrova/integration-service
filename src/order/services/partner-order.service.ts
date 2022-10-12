@@ -1,5 +1,11 @@
 import * as prisma from '@prisma/client';
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  forwardRef,
+  HttpStatus,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { CreateOrderDto } from '../dto/create-order.dto';
 import { OrderStatusEnum } from '../../common/enum/order-status.enum';
 import { SentOrder } from '../models/sent-order.model';
@@ -7,14 +13,18 @@ import { Order } from '../models/order.model';
 import { OpTigerOrderService } from './op-tiger-order.service';
 import { OrderRepository } from '../order.repository';
 import { CarrierKeyEnum } from '../../common/enum/carrier-key.enum';
+import { catchError, firstValueFrom, of } from 'rxjs';
+import { HttpService } from '@nestjs/axios';
 
 @Injectable()
 export class PartnerOrderService {
   private readonly logger = new Logger(PartnerOrderService.name);
 
   constructor(
+    @Inject(forwardRef(() => OpTigerOrderService))
     private readonly opTigerService: OpTigerOrderService,
     private readonly orderRepo: OrderRepository,
+    private readonly httpService: HttpService,
   ) {}
 
   public async handleNewOrder(data: CreateOrderDto): Promise<void> {
@@ -37,6 +47,38 @@ export class PartnerOrderService {
     filledOrder.processingStatus = OrderStatusEnum.PROCESSING;
     const { sentOrder, ...processingOrder } = filledOrder;
     await this.orderRepo.update(processingOrder, null);
+  }
+
+  public async updateClientStatusOrder(order: Order): Promise<void> {
+    try {
+      // todo: create separate method with these headers
+      const headersRequest = {
+        'Content-Type': 'application/json',
+        'X-API-KEY': `${process.env.PARTNER_AUTHORIZATION_API}`,
+      };
+
+      const result = await firstValueFrom(
+        this.httpService
+          .get(`${process.env.PARTNER_API}/orders/${order.receivedOrder}`, {
+            headers: headersRequest,
+          })
+          .pipe(
+            catchError((err) =>
+              of({ message: err.response.data, status: err.response.status }),
+            ),
+          ),
+      );
+
+      if (result.status !== HttpStatus.OK) {
+        this.logger.error('Error with status order Partner');
+        this.logger.error(result);
+      } else {
+        this.logger.log('Success updating Partner');
+      }
+    } catch (e) {
+      this.logger.error('Error during order sending to Partner');
+      this.logger.error(e.message);
+    }
   }
 
   private async transform(order: Order): Promise<Order> {

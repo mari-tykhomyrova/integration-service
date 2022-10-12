@@ -1,12 +1,18 @@
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import {
+  forwardRef,
+  HttpStatus,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { OrderStatusEnum } from '../../common/enum/order-status.enum';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { catchError, firstValueFrom, of } from 'rxjs';
 import { SentOrderStatusEnum } from '../../common/enum/sent-order-status.enum';
-import { Order } from '../models/order.model';
 import { SentOrder } from '../models/sent-order.model';
 import { OrderRepository } from '../order.repository';
+import { PartnerOrderService } from './partner-order.service';
 
 @Injectable()
 export class OpTigerOrderService {
@@ -15,6 +21,8 @@ export class OpTigerOrderService {
   constructor(
     private readonly httpService: HttpService,
     private readonly orderRepo: OrderRepository,
+    @Inject(forwardRef(() => PartnerOrderService))
+    private readonly partnerOrderService: PartnerOrderService,
   ) {}
 
   public async sendToOP(orderToSending: SentOrder): Promise<void> {
@@ -22,7 +30,7 @@ export class OpTigerOrderService {
       // todo: create separate method with these headers
       const headersRequest = {
         'Content-Type': 'application/json',
-        Authorization: `Basic ${process.env.AUTHORIZATION}`,
+        Authorization: `Basic ${process.env.OP_AUTHORIZATION_API}`,
       };
 
       const result = await firstValueFrom(
@@ -69,7 +77,7 @@ export class OpTigerOrderService {
         // todo: create separate method with these headers
         const headersRequest = {
           'Content-Type': 'application/json',
-          Authorization: `Basic ${process.env.AUTHORIZATION}`,
+          Authorization: `Basic ${process.env.OP_AUTHORIZATION_API}`,
         };
 
         const result = await firstValueFrom(
@@ -93,7 +101,7 @@ export class OpTigerOrderService {
           this.logger.error('Error with check order status to OP');
           this.logger.error(result);
         } else {
-          this.logger.log('Success check order');
+          this.logger.log(`Success check order >> ${result.data.state}`);
         }
 
         // if some is finished - update db and client
@@ -102,44 +110,12 @@ export class OpTigerOrderService {
         if (result.data.state === SentOrderStatusEnum.FINISHED) {
           order.processingStatus = OrderStatusEnum.FINISHED;
           await this.orderRepo.update(order, null);
-          await this.updateClientStatusOrder(order);
+          await this.partnerOrderService.updateClientStatusOrder(order);
         }
       } catch (e) {
         this.logger.error('Error during checking status in OP Tiger');
         this.logger.error(e.message);
       }
-    }
-  }
-
-  private async updateClientStatusOrder(order: Order): Promise<void> {
-    try {
-      // todo: create separate method with these headers
-      const headersRequest = {
-        'Content-Type': 'application/json',
-        Authorization: `Basic ${process.env.AUTHORIZATION}`,
-      };
-
-      const result = await firstValueFrom(
-        this.httpService
-          .get(`${process.env.PARTNER_API}/orders/${order.receivedOrder}`, {
-            headers: headersRequest,
-          })
-          .pipe(
-            catchError((err) =>
-              of({ message: err.response.data, status: err.response.status }),
-            ),
-          ),
-      );
-
-      if (result.status !== HttpStatus.OK) {
-        this.logger.error('Error with status order Partner');
-        this.logger.error(result);
-      } else {
-        this.logger.log('Success updating Partner');
-      }
-    } catch (e) {
-      this.logger.error('Error during order sending to Partner');
-      this.logger.error(e.message);
     }
   }
 }
