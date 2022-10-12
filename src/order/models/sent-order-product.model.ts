@@ -3,4 +3,7 @@ export class SentOrderProduct {
   OPTProductID: string; // required, EAN code
   Qty: number; // required
   Weight: number; // required
+
+  createdAt?: Date;
+  updatedAt?: Date;
 }

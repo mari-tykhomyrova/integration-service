@@ -7,6 +7,9 @@ export class ReceivedOrder {
   id: number;
 
   @Field()
+  orderId?: number;
+
+  @Field()
   fullName: string;
 
   @Field()
@@ -51,8 +54,8 @@ export class ReceivedOrder {
   items?: ReceivedOrderDetail[];
 
   @Field()
-  createdAt: Date;
+  createdAt?: Date;
 
   @Field()
-  updatedAt: Date;
+  updatedAt?: Date;
 }

@@ -1,15 +1,13 @@
 import {
   IsArray,
   IsEmail,
-  IsEnum,
   IsNotEmpty,
   IsNumber,
+  IsOptional,
   IsPhoneNumber,
-  IsPostalCode,
   IsString,
   ValidateNested,
 } from 'class-validator';
-import { CarrierKeyEnum } from '../../common/enum/carrier-key.enum';
 import { Type } from 'class-transformer';
 
 export class CreateOrderDto {
@@ -33,16 +31,16 @@ export class CreateOrderDto {
   @IsString()
   addressLine1: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   addressLine2: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   company: string;
 
   @IsNotEmpty()
-  @IsPostalCode()
+  @IsString()
   zipCode: string;
 
   @IsNotEmpty()
@@ -54,7 +52,6 @@ export class CreateOrderDto {
   country: string;
 
   @IsNotEmpty()
-  @IsEnum(CarrierKeyEnum)
   @IsString()
   carrierKey: string;
 

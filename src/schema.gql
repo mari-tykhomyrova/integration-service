@@ -10,6 +10,7 @@ type ReceivedOrderDetail {
   weight: Float!
   eanCode: String!
   createdAt: DateTime!
+  updatedAt: DateTime!
 }
 
 """
@@ -19,6 +20,7 @@ scalar DateTime
 
 type ReceivedOrder {
   id: Int!
+  orderId: Float!
   fullName: String!
   email: String!
   phone: String!

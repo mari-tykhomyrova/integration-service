@@ -3,7 +3,7 @@ import { Field, Int, ObjectType } from '@nestjs/graphql';
 @ObjectType()
 export class ReceivedOrderDetail {
   @Field(() => Int)
-  id: number;
+  id?: number;
 
   @Field()
   productId: number;
@@ -21,5 +21,8 @@ export class ReceivedOrderDetail {
   eanCode: string;
 
   @Field()
-  createdAt: Date;
+  createdAt?: Date;
+
+  @Field()
+  updatedAt?: Date;
 }

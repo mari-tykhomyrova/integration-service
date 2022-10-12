@@ -5,7 +5,7 @@ import { OrderStatusEnum } from '../../common/enum/order-status.enum';
 export class Order {
   id: number;
   processingStatus: OrderStatusEnum;
-  receivedOrder: ReceivedOrder;
+  receivedOrder?: ReceivedOrder;
   sentOrder?: SentOrder;
 
   createdAt: Date;
