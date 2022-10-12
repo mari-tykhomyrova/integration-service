@@ -6,7 +6,7 @@ export class Order {
   id: number;
   processingStatus: OrderStatusEnum;
   receivedOrder: ReceivedOrder;
-  sendOrder?: SentOrder;
+  sentOrder?: SentOrder;
 
   createdAt: Date;
   updatedAt: Date;

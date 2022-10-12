@@ -6,6 +6,7 @@ import { OrderController } from './order.controller';
 import { HttpModule } from '@nestjs/axios';
 import { OpTigerOrderService } from './services/op-tiger-order.service';
 import { CustomerPortalOrderService } from './services/customer-portal-order.service';
+import { OrderRepository } from './order.repository';
 
 @Module({
   imports: [DatabaseModule, HttpModule],
@@ -15,6 +16,7 @@ import { CustomerPortalOrderService } from './services/customer-portal-order.ser
     PartnerOrderService,
     OpTigerOrderService,
     CustomerPortalOrderService,
+    OrderRepository,
   ],
   exports: [],
 })

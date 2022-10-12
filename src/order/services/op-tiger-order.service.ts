@@ -1,20 +1,20 @@
-import { HttpStatus, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { OrderStatusEnum } from '../../common/enum/order-status.enum';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { firstValueFrom } from 'rxjs';
 import { SentOrderStatusEnum } from '../../common/enum/sent-order-status.enum';
 import { Order } from '../models/order.model';
-import { PrismaService } from '../../database/prisma.service';
-import * as prisma from '@prisma/client';
 import { SentOrder } from '../models/sent-order.model';
+import { OrderRepository } from '../order.repository';
 
+@Injectable()
 export class OpTigerOrderService {
   private readonly logger = new Logger(OpTigerOrderService.name);
 
   constructor(
     private readonly httpService: HttpService,
-    private readonly prisma: PrismaService,
+    private readonly orderRepo: OrderRepository,
   ) {}
 
   public async sendToOP(orderToSending: SentOrder): Promise<void> {
@@ -41,9 +41,14 @@ export class OpTigerOrderService {
     this.logger.debug('Called every minute');
 
     // find all not finished orders
-    const orders = await this.findWithParams({
-      processingStatus: OrderStatusEnum.PROCESSING,
-    });
+    const orders = await this.orderRepo.findWithParams(
+      {
+        processingStatus: OrderStatusEnum.PROCESSING,
+      },
+      {
+        sentOrder: { include: { Products: true } },
+      },
+    );
 
     // check if they are finished
     for (const order of orders) {
@@ -51,7 +56,7 @@ export class OpTigerOrderService {
         // todo: add auth
         const result = await firstValueFrom(
           this.httpService.get(
-            `${process.env.OP_API}/api/orders/${order.sendOrder.OrderID}/state`,
+            `${process.env.OP_API}/api/orders/${order.sentOrder.OrderID}/state`,
           ),
         );
 
@@ -60,7 +65,7 @@ export class OpTigerOrderService {
         // todo: also save status into received order
         if (result.data.state === SentOrderStatusEnum.FINISHED) {
           order.processingStatus = OrderStatusEnum.FINISHED;
-          await this.update(order);
+          await this.orderRepo.update(order, null);
           await this.updateClientStatusOrder(order);
         }
       } catch (e) {
@@ -85,29 +90,5 @@ export class OpTigerOrderService {
     } catch (e) {
       this.logger.error('Error during order sending to Partner');
     }
-  }
-
-  private async findWithParams(
-    whereOptions: prisma.Prisma.OrderWhereInput,
-  ): Promise<Order[]> {
-    // todo: try to implement repository
-    const orders = await this.prisma.order.findMany({
-      where: whereOptions,
-      include: {
-        sendOrder: { include: { Products: true } },
-      } as prisma.Prisma.OrderInclude,
-    });
-
-    return orders as Order[];
-  }
-
-  private async update(data: Order): Promise<Order> {
-    // todo: try to implement repository
-    const updatedOrder = await this.prisma.order.update({
-      where: { id: data.id },
-      data,
-    });
-
-    return updatedOrder as Order;
   }
 }
