@@ -1,0 +1,100 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Order {
+  id                Int         @id @default(autoincrement())
+  processingStatus  OrderStatusEnum
+
+  receivedOrder     ReceivedOrder?
+
+  sentOrder         SentOrder?
+
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @default(now())
+}
+
+model ReceivedOrder {
+  id                Int         @id @default(autoincrement())
+  orderId           Int?
+  fullName          String?
+  email             String?
+  phone             String?
+  addressLine1      String?
+  addressLine2      String?
+  company           String?
+  zipCode           String?
+  city              String?
+  country           String?
+  carrierKey        String?
+  status            String?
+
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @default(now())
+
+  details           ReceivedOrderDetail[]
+
+  order             Order      @relation(fields: [parentOrderId], references: [id])
+  parentOrderId     Int        @unique
+}
+
+model ReceivedOrderDetail {
+  id                Int         @id @default(autoincrement())
+  productId         Int
+  name              String
+  quantity          Int
+  weight            Int
+  eanCode           String
+
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @default(now())
+
+  receivedOrder     ReceivedOrder   @relation(fields: [receivedOrderId], references: [id])
+  receivedOrderId   Int         @unique
+}
+
+model SentOrder {
+  id                Int         @id @default(autoincrement())
+  OrderID           String
+  InvoiceSendLater  Boolean     @default(false)
+  Issued            String
+  OrderType         String      @default("standard")
+  Shipping          Json
+
+  Products          SentOrderProduct[]
+
+  order             Order      @relation(fields: [parentOrderId], references: [id])
+  parentOrderId     Int        @unique
+
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @default(now())
+}
+
+model SentOrderProduct {
+  id                Int         @id @default(autoincrement())
+  Barcode           String
+  OPTProductID      String
+  Qty               Int
+  Weight            Int
+
+  SentOrder         SentOrder   @relation(fields: [SentOrderId], references: [id])
+  SentOrderId       Int
+
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @default(now())
+}
+
+enum OrderStatusEnum {
+  NEW
+  PROCESSING
+  ERROR
+  FINISHED
+}
